@@ -1,0 +1,21 @@
+4
+Szczecin
+Cracow
+Lublin
+Gdansk
+973
+463
+134
+430
+828
+201
+Car factory
+Coal mine
+Port
+Shipyard
+29
+69
+98
+45
+14
+33

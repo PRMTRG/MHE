@@ -1,0 +1,57 @@
+7
+Gdansk
+Poznan
+Lublin
+Lodz
+Szczecin
+Warsaw
+Katowice
+637
+444
+232
+149
+848
+529
+351
+525
+840
+537
+400
+394
+644
+50
+203
+993
+411
+69
+707
+294
+883
+Hospital
+Refinery
+Coal mine
+Car factory
+5G tower
+Airport
+Missle silo
+70
+33
+54
+29
+37
+52
+55
+8
+52
+17
+5
+94
+33
+90
+15
+97
+18
+36
+73
+95
+17
