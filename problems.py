@@ -1,7 +1,8 @@
 import random as rand
 import utils
 
-def validateProblem(problem):
+
+def validate_problem(problem):
     locations = problem[0]
     distances = problem[1]
     facilities = problem[2]
@@ -9,19 +10,20 @@ def validateProblem(problem):
     size = len(locations)
     if len(facilities) != size:
         return False
-    pairs = utils.generatePairs(size)
+    pairs = utils.generate_pairs(size)
     if len(pairs) != len(distances):
         return False
     if len(distances) != len(flows):
         return False
-    distancesKeys = list(distances.keys())
-    flowsKeys = list(flows.keys())
-    for i, pair in enumerate(utils.generatePairs(size)):
-        if pair != distancesKeys[i] or pair != flowsKeys[i]:
+    distances_keys = list(distances.keys())
+    flows_keys = list(flows.keys())
+    for i, pair in enumerate(utils.generate_pairs(size)):
+        if pair != distances_keys[i] or pair != flows_keys[i]:
             return False
     return True
 
-def printProblem(problem):
+
+def print_problem(problem):
     locations = problem[0]
     distances = problem[1]
     facilities = problem[2]
@@ -31,7 +33,8 @@ def printProblem(problem):
     for key, value in flows.items():
         print("Flow between {} and {} is {}".format(facilities[key[0]],facilities[key[1]],value))
 
-def readProblemFromFile(filename):
+
+def read_problem_from_file(filename):
     locations = []
     distances = {}
     facilities = []
@@ -40,7 +43,7 @@ def readProblemFromFile(filename):
         lines = file.read().splitlines()
     size = int(lines[0])
     cnt = 1
-    pairs = utils.generatePairs(size)
+    pairs = utils.generate_pairs(size)
     for i in range(size):
         locations.append(lines[cnt])
         cnt += 1
@@ -56,7 +59,8 @@ def readProblemFromFile(filename):
     file.close()
     return [locations, distances, facilities, flows]
 
-def getOutputForWritingProblemToFile(problem):
+
+def get_output_for_writing_problem_to_file(problem):
     locations = problem[0]
     distances = problem[1]
     facilities = problem[2]
@@ -65,7 +69,7 @@ def getOutputForWritingProblemToFile(problem):
     output = []
     cnt = 1
     output.append(str(size)+'\n')
-    pairs = utils.generatePairs(size)
+    pairs = utils.generate_pairs(size)
     for i in range(size):
         output.append(locations[i]+'\n')
         cnt += 1
@@ -80,13 +84,15 @@ def getOutputForWritingProblemToFile(problem):
         cnt += 1
     return output
 
-def writeProblemToFile(filename, problem):
+
+def write_problem_to_file(filename, problem):
     file = open(filename, "w")
-    file.writelines(getOutputForWritingProblemToFile(problem))
+    file.writelines(get_output_for_writing_problem_to_file(problem))
     file.close()
     return 0
 
-def generateExampleProblem():
+
+def generate_example_problem():
     locations = ["Szczecin","Cracow","Lublin","Gdansk"]
     distances = {
         (0, 1):973,
@@ -107,34 +113,36 @@ def generateExampleProblem():
         }
     return [locations, distances, facilities, flows]
 
-def generateRandomProblem(size):
+
+def generate_random_problem(size):
     locations = []
     distances = {}
     facilities = []
     flows = {}
-    locationNames = ["Warsaw","Cracow","Lodz","Wroclaw","Poznan","Gdansk","Szczecin","Bydgoszcz","Lublin","Bialystok","Katowice","Gdynia"]
-    facilityNames = ["Phone factory","Refinery","Coal mine","Hospital","Car factory","Missle silo","Centrifuge","Shipyard","Port","Power plant","5G tower","Airport"]
-    rand.shuffle(locationNames)
-    rand.shuffle(facilityNames)
+    location_names = ["Warsaw","Cracow","Lodz","Wroclaw","Poznan","Gdansk","Szczecin","Bydgoszcz","Lublin","Bialystok","Katowice","Gdynia"]
+    facility_names = ["Phone factory","Refinery","Coal mine","Hospital","Car factory","Missle silo","Centrifuge","Shipyard","Port","Power plant","5G tower","Airport"]
+    rand.shuffle(location_names)
+    rand.shuffle(facility_names)
     #size = rand.randint(3, 10)
     for i in range(size):
-        locations.append(locationNames[i])
-        facilities.append(facilityNames[i])
-    for pair in utils.generatePairs(size):
+        locations.append(location_names[i])
+        facilities.append(facility_names[i])
+    for pair in utils.generate_pairs(size):
         distances[pair] = rand.randint(50,1000)
-        flows[pair] = rand.randint(5,100)
+        flows[pair] = rand.randint(0,100)
     return [locations, distances, facilities, flows]
 
-def getProblem(method, *argv):
+
+def get_problem(method, *argv):
     if method == "example":
-        return generateExampleProblem()
+        return generate_example_problem()
     if method == "random":
-        return generateRandomProblem(argv[0])
-    if method == "readFile":
-        return readProblemFromFile(argv[0])
-    if method == "readFiles":
+        return generate_random_problem(argv[0])
+    if method == "read_file":
+        return read_problem_from_file(argv[0])
+    if method == "read_files":
         problems = []
         for arg in argv:
-            problems.append(readProblemFromFile(arg))
+            problems.append(read_problem_from_file(arg))
         return problems
 
