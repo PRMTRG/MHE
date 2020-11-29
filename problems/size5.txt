@@ -1,0 +1,31 @@
+5
+Poznan
+Bydgoszcz
+Szczecin
+Cracow
+Gdynia
+955
+595
+973
+821
+114
+748
+215
+591
+667
+329
+Phone factory
+Car factory
+Airport
+Shipyard
+Port
+17
+70
+86
+67
+0
+86
+27
+42
+37
+92

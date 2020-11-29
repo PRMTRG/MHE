@@ -138,7 +138,7 @@ def get_problem(method, *argv):
         return generate_example_problem()
     if method == "random":
         return generate_random_problem(argv[0])
-    if method == "read_file":
+    if method == "file":
         return read_problem_from_file(argv[0])
     if method == "read_files":
         problems = []

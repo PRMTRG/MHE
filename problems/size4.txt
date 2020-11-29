@@ -1,0 +1,21 @@
+4
+Warsaw
+Katowice
+Bialystok
+Lublin
+744
+601
+447
+407
+839
+559
+Centrifuge
+Airport
+5G tower
+Hospital
+54
+18
+73
+6
+45
+19

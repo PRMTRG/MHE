@@ -1,0 +1,13 @@
+3
+Cracow
+Poznan
+Wroclaw
+523
+367
+533
+Coal mine
+Hospital
+Centrifuge
+21
+29
+47

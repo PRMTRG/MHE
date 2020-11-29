@@ -1,0 +1,43 @@
+6
+Cracow
+Szczecin
+Lodz
+Katowice
+Gdynia
+Bydgoszcz
+109
+503
+742
+52
+148
+240
+197
+91
+66
+871
+449
+515
+57
+372
+681
+Port
+Refinery
+Power plant
+Coal mine
+Shipyard
+Phone factory
+30
+5
+69
+56
+35
+78
+19
+35
+20
+76
+44
+80
+71
+49
+58

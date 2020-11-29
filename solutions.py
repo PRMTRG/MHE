@@ -24,31 +24,52 @@ class Solver:
         self.solver_algorithm = solver_algorithm
         self.enable_print = enable_print
         self.solution_rater = SolutionRater(self.solver_name, self.enable_print)
-    def solve(self, problem, *argv, output_to_terminal=False, output_to_file=False, 
-              output_file="", measure_time=False):
+    def output_results_to_terminal(self, problem, solution, rating,
+                           measure_time=False, time_taken=0):
+        print(self.solver_name)
+        print("Solution:", solution)
+        print("Rating:", rating)
+        print("Rater calls:", self.solution_rater.counter)
+        if measure_time:
+            print("Time taken:", time_taken)
+        print()
+    def output_results_to_file(self, output_file, problem, solution, rating,
+                               measure_time=False, time_taken=0):
+        file = open(output_file, "w")
+        file.writelines(problems.get_output_for_writing_problem_to_file(problem))
+        file.write('\n')
+        if measure_time:
+            file.write(str(time_taken)+'\n')
+        file.write(str(solution)+'\n')
+        file.write(str(rating)+'\n')
+        file.close()
+    def output_plot_data_to_file(self, plot_data_output_file, plot_time, plot_result):
+        file = open(plot_data_output_file, "w")
+        for i in range(len(plot_time)):
+            file.write(str(plot_time[i]) + " " + str(plot_result[i]) + "\n")
+        file.close()
+    def solve(self, problem, *argv, output_results_to_terminal=False,
+              output_results_to_file=False, results_output_file="",
+              output_plot_data_to_file=False, plot_data_output_file="",
+              plotting_step=1, measure_time=True):
+        time_taken = 0
         if measure_time:
             start_time = time.time()
-        solution = self.solver_algorithm(self.solution_rater, problem, *argv)
+        if output_plot_data_to_file:
+            solution, plot_time, plot_result = self.solver_algorithm(self.solution_rater,
+                            problem, *argv, save_data_for_plot=True, plotting_step=plotting_step)
+            self.output_plot_data_to_file(plot_data_output_file, plot_time, plot_result)
+        else:
+            solution = self.solver_algorithm(self.solution_rater, problem, *argv)
         rating = rate_solution(solution.copy(), problem)
         if measure_time:
             time_taken = time.time() - start_time
-        if output_to_file and output_file != "":
-            file = open(output_file, "w")
-            file.writelines(problems.get_output_for_writing_problem_to_file(problem))
-            file.write('\n')
-            if measure_time:
-                file.write(str(time_taken)+'\n')
-            file.write(str(solution)+'\n')
-            file.write(str(rating)+'\n')
-            file.close()
-        elif output_to_terminal:
-            print(self.solver_name)
-            print("Solution:", solution)
-            print("Rating:", rating)
-            print("Rater calls:", self.solution_rater.counter)
-            if measure_time:
-                print("Time taken:", time_taken)
-            print()
+        if output_results_to_file and results_output_file != "":
+            self.output_results_to_file(results_output_file, problem, solution,
+                                        rating, measure_time, time_taken)
+        if output_results_to_terminal:
+            self.output_results_to_terminal(problem, solution, rating,
+                                            measure_time, time_taken)
         self.solution_rater.counter = 0
 
 
@@ -132,60 +153,110 @@ def generate_neighboring_solutions(solution):
     return neighbors
 
 
-def bruteforce(solution_rater, problem):
+def bruteforce(solution_rater, problem,
+               save_data_for_plot=False, plotting_step=1):
     size = len(problem[0])
     permutations = utils.generate_permutations(size)
     best_solution = list(permutations[0])
-    best_rating = solution_rater.rate(best_solution.copy(), problem)
-    for i in range(1, len(permutations)):
+    best_result = solution_rater.rate(best_solution.copy(), problem)
+    if save_data_for_plot:
+        plot_time = []
+        plot_time.append(0)
+        plot_result = []
+        plot_result.append(best_result)
+        start_time = time.perf_counter()
+    iterations = len(permutations)
+    for i in range(1, iterations):
         solution = list(permutations[i])
-        rating = solution_rater.rate(solution.copy(), problem)
-        if rating < best_rating:
+        result = solution_rater.rate(solution.copy(), problem)
+        if result < best_result:
             best_solution = solution
-            best_rating = rating
-    return best_solution
+            best_result = result
+        if save_data_for_plot and (i % plotting_step == 0 or i == iterations - 1):
+            plot_time.append(time.perf_counter() - start_time)
+            plot_result.append(best_result)
+    if save_data_for_plot:
+        return best_solution, plot_time, plot_result 
+    else:
+        return best_solution
 
 
-def hillclimb_ver1(solution_rater, problem, attempts):
+def hillclimb_ver1(solution_rater, problem, iterations,
+                   save_data_for_plot=False, plotting_step=1):
     best_solution = generate_random_solution(problem)
     size = len(best_solution)
-    best_rating = solution_rater.rate(best_solution.copy(), problem)
-    for i in range(attempts):
+    best_result = solution_rater.rate(best_solution.copy(), problem)
+    if save_data_for_plot:
+        plot_time = []
+        plot_time.append(0)
+        plot_result = []
+        plot_result.append(best_result)
+        start_time = time.perf_counter()
+    for i in range(iterations):
         neighbors = generate_neighboring_solutions(best_solution.copy())
         new_best_solution = neighbors[0].copy()
-        new_best_rating = solution_rater.rate(new_best_solution.copy(), problem)
+        new_best_result = solution_rater.rate(new_best_solution.copy(), problem)
         for j in range(1, size):
-            solution = neighbors[i].copy()
-            rating = solution_rater.rate(solution.copy(), problem)
-            if rating < new_best_rating:
+            solution = neighbors[j].copy()
+            result = solution_rater.rate(solution.copy(), problem)
+            if result < new_best_result:
                 new_best_solution = solution.copy()
-                new_best_rating = rating
-        if best_rating < new_best_rating:
-            break
+                new_best_result = result
+        end = False
+        if best_result < new_best_result:
+            end = True
         else:
             best_solution = new_best_solution.copy()
-            best_rating = new_best_rating
-    return best_solution
+            best_result = new_best_result
+        if save_data_for_plot and (i % plotting_step == 0 or i == iterations - 1 or end):
+            plot_time.append(time.perf_counter() - start_time)
+            plot_result.append(best_result)
+        if end:
+            break
+    if save_data_for_plot:
+        return best_solution, plot_time, plot_result
+    else:
+        return best_solution
 
 
-def hillclimb_ver2(solution_rater, problem, attempts):
+def hillclimb_ver2(solution_rater, problem, iterations,
+                   save_data_for_plot=False, plotting_step=1):
     best_solution = generate_random_solution(problem)
-    best_rating = solution_rater.rate(best_solution.copy(), problem)
-    for i in range(attempts):
+    best_result = solution_rater.rate(best_solution.copy(), problem)
+    if save_data_for_plot:
+        plot_time = []
+        plot_time.append(0)
+        plot_result = []
+        plot_result.append(best_result)
+        start_time = time.perf_counter()
+    for i in range(iterations):
         neighbour = generate_random_neighbour(best_solution.copy())
-        rating = solution_rater.rate(neighbour.copy(), problem)
-        if best_rating > rating:
+        result = solution_rater.rate(neighbour.copy(), problem)
+        if best_result > result:
             best_solution = neighbour.copy()
-            best_rating = rating
-    return best_solution
+            best_result = result
+        if save_data_for_plot and (i % plotting_step == 0 or i == iterations - 1):
+            plot_time.append(time.perf_counter() - start_time)
+            plot_result.append(best_result)
+    if save_data_for_plot:
+        return best_solution, plot_time, plot_result
+    else:
+        return best_solution
 
 
-def tabu(solution_rater, problem, attempts, tabu_size):
+def tabu(solution_rater, problem, iterations, tabu_size,
+         save_data_for_plot=False, plotting_step=1):
     tabu_list = []
     best_solution = generate_random_solution(problem)
     tabu_list.append(best_solution.copy())
     size = len(tabu_list[0])
-    for i in range(attempts):
+    if save_data_for_plot:
+        plot_time = []
+        plot_time.append(0)
+        plot_result = []
+        plot_result.append(rate_solution(best_solution, problem))
+        start_time = time.perf_counter()
+    for i in range(iterations):
         neighbours = []
         for i in range(size):
             new_solution = add_axis(tabu_list[-1].copy(), i)
@@ -195,11 +266,29 @@ def tabu(solution_rater, problem, attempts, tabu_size):
                     found = True
             if not found:
                 neighbours.append(new_solution.copy())
+        if len(neighbours) == 0:
+            break #got stuck
         neighbours.sort(key=lambda x: solution_rater.rate(x.copy(), problem), reverse=True)
         tabu_list.append(neighbours[-1].copy())
         if solution_rater.rate(tabu_list[-1], problem) < solution_rater.rate(best_solution.copy(), problem):
             best_solution = tabu_list[-1].copy()
         if len(tabu_list) > tabu_size:
             tabu_list.pop(0)
-    return best_solution
+        if save_data_for_plot and (i % plotting_step == 0 or i == iterations - 1):
+            plot_time.append(time.perf_counter() - start_time)
+            plot_result.append(rate_solution(best_solution, problem))
+    if save_data_for_plot:
+        return best_solution, plot_time, plot_result
+    else:
+        return best_solution
 
+
+def get_solver(solver_name):
+    if solver_name == "bruteforce":
+        return bruteforce
+    elif solver_name == "hillclimb1":
+        return hillclimb_ver1
+    elif solver_name == "hillclimb2":
+        return hillclimb_ver2
+    elif solver_name == "tabu":
+        return tabu

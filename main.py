@@ -3,49 +3,73 @@ import problems
 import solutions
 import presets
 import utils
+import argparse
 
-def fun(problem, filename):
-    solver1 = solutions.Solver("bruteforce", solutions.bruteforce)
-    solver2 = solutions.Solver("hillclimb1", solutions.hillclimb_ver1)
-    solver3 = solutions.Solver("hillclimb2", solutions.hillclimb_ver2)
-    solver4 = solutions.Solver("tabu", solutions.tabu)
-    solver1.solve(problem, output_to_file=True, output_file=filename+"_bruteforce.txt", measure_time=True)
-    solver2.solve(problem, 1000, output_to_file=True, output_file=filename+"_hillclimb1.txt", measure_time=True)
-    solver3.solve(problem, 1000, output_to_file=True, output_file=filename+"_hillclimb2.txt", measure_time=True)
-    solver4.solve(problem, 1000, 100, output_to_file=True, output_file=filename+"_tabu.txt", measure_time=True)
+
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        if sys.argv[1] == "random":
-            problem = problems.get_problem("random", int(sys.argv[2]))
-            fun(problem, sys.argv[3])
-        elif sys.argv[1] == "read_file":
-            problem = problems.get_problem("read_file", sys.argv[2])
-            fun(problem, sys.argv[3])
-            
-    else:
-    
-        problem_list = []
-        problem_list.append(problems.get_problem("random", 8))
-        problem_list.append(problems.get_problem("read_file", "problems/size7_000.txt"))
-        #problems.append(problems.get_problem("random", 10))
-    
-        solver1 = solutions.Solver("bruteforce", solutions.bruteforce)
-        solver2 = solutions.Solver("hillclimb1", solutions.hillclimb_ver1)
-        solver3 = solutions.Solver("hillclimb2", solutions.hillclimb_ver2)
-        solver4 = solutions.Solver("tabu", solutions.tabu)
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--problem_source", type=str)
+        parser.add_argument("--random_problem_size", type=check_positive, default=5)
+        parser.add_argument("--problem_file", type=str, default="")
+        parser.add_argument("--solver", type=str)
+        parser.add_argument("--iterations", type=check_positive, default=1000)
+        parser.add_argument("--tabu_size", type=check_positive, default=100)
+        parser.add_argument("--output_results_to_terminal", action="store_true")
+        parser.add_argument("--output_results_to_file", action="store_true")
+        parser.add_argument("--results_output_file", type=str, default="")
+        parser.add_argument("--output_plot_data_to_file", action="store_true")
+        parser.add_argument("--plot_data_output_file", type=str, default="")
+        parser.add_argument("--plotting_step", type=check_positive, default=1)
+        args = parser.parse_args()
         
-        for i, problem in enumerate(problem_list):
-            print("########################")
-            print(f'Problem #{i}')
-            print("########################")
-            print()
-            
-            solver1.solve(problem, output_to_terminal=True, measure_time=True)
-            solver2.solve(problem, 1000, output_to_terminal=True, measure_time=True)
-            solver3.solve(problem, 1000, output_to_terminal=True, measure_time=True)
-            solver4.solve(problem, 1000, 100, output_to_terminal=True, measure_time=True)
+        if args.problem_source == "random":
+            problem = problems.get_problem("random", args.random_problem_size)
+        elif args.problem_source == "file":
+            problem = problems.get_problem("file", args.problem_file)
+        else:
+            print("Invalid problem source.")
+            sys.exit()
+        
+        solver = solutions.Solver(args.solver, solutions.get_solver(args.solver))
+        if args.solver == "bruteforce":
+            solver.solve(problem,
+                         output_results_to_terminal=args.output_results_to_terminal,
+                         output_results_to_file=args.output_results_to_file,
+                         results_output_file=args.results_output_file,
+                         output_plot_data_to_file=args.output_plot_data_to_file,
+                         plot_data_output_file=args.plot_data_output_file,
+                         plotting_step=args.plotting_step
+                         )
+        elif args.solver == "hillclimb1" or args.solver == "hillclimb2":
+            solver.solve(problem,
+                         args.iterations,
+                         output_results_to_terminal=args.output_results_to_terminal,
+                         output_results_to_file=args.output_results_to_file,
+                         results_output_file=args.results_output_file,
+                         output_plot_data_to_file=args.output_plot_data_to_file,
+                         plot_data_output_file=args.plot_data_output_file,
+                         plotting_step=args.plotting_step
+                         )
+        elif args.solver == "tabu":
+            solver.solve(problem,
+                         args.iterations,
+                         args.tabu_size,
+                         output_results_to_terminal=args.output_results_to_terminal,
+                         output_results_to_file=args.output_results_to_file,
+                         results_output_file=args.results_output_file,
+                         output_plot_data_to_file=args.output_plot_data_to_file,
+                         plot_data_output_file=args.plot_data_output_file,
+                         plotting_step=args.plotting_step
+                         )
     
-    
+    else:
+        pass
     
