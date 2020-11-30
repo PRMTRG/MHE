@@ -1,29 +1,31 @@
 [System.Collections.ArrayList]$problems = @()
-for ($i = 3; $i -lt 11; $i++){
+for ($i = 3; $i -lt 10; $i++){
     $problems.Add("size$i") > $null
 }
 $solvers = ( "bruteforce", "hillclimb1", "hillclimb2", "tabu" )
 $experiments = 5
-$iterations = 1000
+$iterationCounts = ( 100, 300, 500, 1000, 2000 )
 $tabuSize = 100
 
 foreach ( $solver in $solvers ){
-    foreach ( $problem in $problems ){
-        for ( $i = 0; $i -lt $experiments; $i++ ){
-            $expression = 'python main.py --problem_source "file" --problem_file "{0}"' -f ("problems/" + $problem + ".txt")
-            $expression += ' --solver "{0}" --iterations {1}' -f $solver, $iterations
-            if ($solver -eq "tabu"){
-                $expression += ' --tabu_size {0}' -f $tabuSize
+    foreach ( $iterationCount in $iterationCounts ){
+        foreach ( $problem in $problems ){
+            for ( $i = 0; $i -lt $experiments; $i++ ){
+                $expression = 'python main.py --problem_source "file" --problem_file "{0}"' -f ("problems/" + $problem + ".txt")
+                $expression += ' --solver "{0}" --iterations {1}' -f $solver, $iterationCount
+                if ($solver -eq "tabu"){
+                    $expression += ' --tabu_size {0}' -f $tabuSize
+                }
+                $filename = "plot_data/{0}_{1}_{2}_run{3}.txt" -f $solver, $iterationCount, $problem, $i
+                $expression += ' --output_plot_data_to_file --plot_data_output_file "{0}"' -f $filename
+                if ( $problem -eq "size9" -and $solver -eq "bruteforce" ){
+                    $expression += ' --plotting_step 100'
+                }
+                if ( $problem -eq "size10" -and $solver -eq "bruteforce" ){
+                    $expression += ' --plotting_step 1000'
+                }
+                Invoke-Expression $expression
             }
-            $filename = "plot_data/{0}_{1}_run{2}.txt" -f $solver, $problem, $i
-            $expression += ' --output_plot_data_to_file --plot_data_output_file "{0}"' -f $filename
-            if ( $problem -eq "size9" -and $solver -eq "bruteforce" ){
-                $expression += ' --plotting_step 100'
-            }
-            if ( $problem -eq "size10" -and $solver -eq "bruteforce" ){
-                $expression += ' --plotting_step 1000'
-            }
-            #Invoke-Expression $expression
         }
     }
 }
@@ -32,30 +34,58 @@ foreach ( $solver in $solvers ){
 [System.Collections.ArrayList]$listSolverResults = @()
 
 foreach ( $solver in $solvers ){
-    $outputFile = "experiment_data/average_results/$solver.txt"
+    [System.Collections.ArrayList]$listSolverTimesPerArgs = @()
+    [System.Collections.ArrayList]$listSolverResultsPerArgs = @()
+    foreach ( $iterationCount in $iterationCounts ){
+        $outputFile = "experiment_data/average_results/{0}_{1}.txt" -f $solver, $iterationCount
+        if ([System.IO.File]::Exists($outputFile)){
+            Clear-Content $outputFile
+        }
+        [System.Collections.ArrayList]$solverTimes = @()
+        [System.Collections.ArrayList]$solverResults = @()
+        foreach ( $problem in $problems ){
+            [System.Collections.ArrayList]$timeTaken = @()
+            [System.Collections.ArrayList]$result = @()
+            for ( $i = 0; $i -lt $experiments; $i++ ){
+                $inputFile = "plot_data/{0}_{1}_{2}_run{3}.txt" -f $solver, $iterationCount, $problem, $i
+                $data = Get-Content $inputFile
+                $lastLine = $data[-1].Split(" ")
+                $timeTaken.Add($lastLine[0]) > $null
+                $result.Add($lastLine[1]) > $null
+            }
+            $averageTimeTakenInExperiments = [math]::Round(($timeTaken | Measure-Object -Average).Average, 2)
+            $averageResultInExperiments = [math]::Round(($result | Measure-Object -Average).Average)
+            $solverTimes.Add($averageTimeTakenInExperiments) > $null
+            $solverResults.Add($averageResultInExperiments) > $null
+            "$solver $($problem[4..$problem.Length]-join'') $averageTimeTakenInExperiments $averageResultInExperiments" | Add-Content $outputFile
+        }
+        $listSolverTimesPerArgs.Add($solverTimes) > $null
+        $listSolverResultsPerArgs.Add($solverResults) > $null        
+    }
+    [System.Collections.ArrayList]$averageProblemTimeForSolver = @()
+    [System.Collections.ArrayList]$averageProblemResultForSolver = @()
+    for ( $i = 0; $i -lt $problems.Count; $i++ ){
+        $sumTime = 0
+        $sumResult = 0
+        for ( $j = 0; $j -lt $iterationCounts.Count; $j++ ){
+            $sumTime += $listSolverTimesPerArgs[$j][$i]
+            $sumResult += $listSolverResultsPerArgs[$j][$i]
+        }
+        $averageProblemTimeForSolver.Add( $sumTime / $iterationCounts.Count ) > $null
+        $averageProblemResultForSolver.Add( $sumResult / $iterationCounts.Count ) > $null
+    }
+    $listSolverTimes.Add($averageProblemTimeForSolver) > $null
+    $listSolverResults.Add($averageProblemResultForSolver) > $null
+}
+
+for ( $i = 0; $i -lt $solvers.Count; $i++ ){
+    $outputFile = "experiment_data/average_results/{0}.txt" -f $solvers[$i]
     if ([System.IO.File]::Exists($outputFile)){
         Clear-Content $outputFile
     }
-    [System.Collections.ArrayList]$solverTimes = @()
-    [System.Collections.ArrayList]$solverResults = @()
-    foreach ( $problem in $problems ){
-        [System.Collections.ArrayList]$timeTaken = @()
-        [System.Collections.ArrayList]$result = @()
-        for ( $i = 0; $i -lt $experiments; $i++ ){
-            $inputFile = "plot_data/{0}_{1}_run{2}.txt" -f $solver, $problem, $i
-            $data = Get-Content $inputFile
-            $lastLine = $data[-1].Split(" ")
-            $timeTaken.Add($lastLine[0]) > $null
-            $result.Add($lastLine[1]) > $null
-        }
-        $averageTimeTaken = [math]::Round(($timeTaken | Measure-Object -Average).Average, 2)
-        $averageResult = [math]::Round(($result | Measure-Object -Average).Average)
-        $solverTimes.Add($averageTimeTaken) > $null
-        $solverResults.Add($averageResult) > $null
-        "$solver $($problem[4..$problem.Length]-join'') $averageTimeTaken $averageResult" | Add-Content $outputFile
+    for ( $j = 0; $j -lt $problems.Count; $j++ ){
+        "$($solvers[$i]) $($problems[$j][4..$problem.Length]-join'') $($listSolverTimes[$i][$j]) $($listSolverResults[$i][$j])" | Add-Content $outputFile
     }
-    $listSolverTimes.Add($solverTimes) > $null
-    $listSolverResults.Add($solverResults) > $null
 }
 
 $outputFile1 = "experiment_data/plots/times.txt"
