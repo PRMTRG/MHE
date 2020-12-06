@@ -3,6 +3,7 @@ import utils
 import random as rand
 import time
 import problems
+import math
 
 
 class SolutionRater:
@@ -26,13 +27,17 @@ class Solver:
         self.solution_rater = SolutionRater(self.solver_name, self.enable_print)
     def output_results_to_terminal(self, problem, solution, rating,
                            measure_time=False, time_taken=0):
-        print(self.solver_name)
-        print("Solution:", solution)
-        print("Rating:", rating)
-        print("Rater calls:", self.solution_rater.counter)
+        # print(self.solver_name)
+        # print("Solution:", solution)
+        # print("Rating:", rating)
+        # print("Rater calls:", self.solution_rater.counter)
+        # if measure_time:
+        #     print("Time taken:", time_taken)
+        # print()
         if measure_time:
-            print("Time taken:", time_taken)
-        print()
+            print("{} {}".format(time_taken, rating))
+        else:
+            print(rating)
     def output_results_to_file(self, output_file, problem, solution, rating,
                                measure_time=False, time_taken=0):
         file = open(output_file, "w")
@@ -281,6 +286,33 @@ def tabu(solution_rater, problem, iterations, tabu_size,
         return best_solution, plot_time, plot_result
     else:
         return best_solution
+
+
+def simulated_annealing(solution_rater, problem, iterations,
+                         temperature_function, t_args, print_iterations=False):
+    solutions = []
+    results = []
+    solutions.append(generate_random_solution(problem))
+    results.append(solution_rater.rate(solutions[-1].copy(), problem))
+    for k in range(1, iterations):
+        neighbour = generate_random_neighbour(solutions[-1].copy())
+        result = solution_rater.rate(neighbour.copy(), problem)
+        if results[-1] >= result:
+            solutions.append(neighbour.copy())
+            results.append(result)
+        else:
+            u = rand.random()
+            ep = math.exp(-1 * abs(result - results[-1]) / temperature_function(k, t_args))
+            if (u < ep):
+                solutions.append(neighbour.copy())
+                results.append(result)
+            else:
+                solutions.append(solutions[-1])
+                results.append(results[-1])
+    if print_iterations:
+        for k in range(len(results)):
+            print("k = {} result = {}".format(k, results[k]))
+    return solutions, results
 
 
 def get_solver(solver_name):
