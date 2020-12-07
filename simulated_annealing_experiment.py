@@ -1,5 +1,6 @@
 import problems
 import solutions
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     experiments = 10
@@ -15,14 +16,14 @@ if __name__ == "__main__":
         [] 
         ]
     f2_args = [ 
-        [ iterations_counts[0] ], 
-        [ iterations_counts[1] ], 
-        [ iterations_counts[2] ] 
+        [], 
+        [], 
+        [] 
         ]
     f3_args = [ 
-        [ iterations_counts[0], 500 ], 
-        [ iterations_counts[1], 1000 ], 
-        [ iterations_counts[2], 2000 ] 
+        [ 500 ], 
+        [ 1000 ], 
+        [ 2000 ] 
         ]
     function_names = [ "f1", "f2", "f3" ]
     functions_arguments = {
@@ -30,14 +31,12 @@ if __name__ == "__main__":
         function_names[1]: f2_args,
         function_names[2]: f3_args,
         }
-    def f1(k, args):
+    def f1(k, iterations, args):
         return 0.1
-    def f2(k, args):
-        iterations = args[0]
+    def f2(k, iterations, args):
         return 1000.0 * iterations / k;
-    def f3(k, args):
-        iterations = args[0]
-        x = args[1]
+    def f3(k, iterations, args):
+        x = args[0]
         return x * iterations / k;
     functions = {
         function_names[0]: f1,
@@ -46,6 +45,7 @@ if __name__ == "__main__":
         }
     solution_rater = solutions.SolutionRater("simulated_annealing", False)
     best_result = float("inf")
+    
     
     for iterations_count in iterations_counts:
         for function_name in function_names:
@@ -59,6 +59,13 @@ if __name__ == "__main__":
                                                                            problem, iterations_count, 
                                                                            functions[function_name],
                                                                            function_arguments)
+                        if function_name == "f3" and \
+                            iterations_count == 1000 and \
+                            experiment == 0:
+                            plt.plot(res_list)
+                            plt.title(function_arguments)
+                            plt.show()
+                            
                         r2.append(res_list[-1])
                     r1.append(sum(r2) / len(r2))
                 result = sum(r1) / len(r1)

@@ -302,7 +302,7 @@ def simulated_annealing(solution_rater, problem, iterations,
             results.append(result)
         else:
             u = rand.random()
-            ep = math.exp(-1 * abs(result - results[-1]) / temperature_function(k, t_args))
+            ep = math.exp(-1 * abs(result - results[-1]) / temperature_function(k, iterations, t_args))
             if (u < ep):
                 solutions.append(neighbour.copy())
                 results.append(result)
