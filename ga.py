@@ -70,7 +70,7 @@ def tournament_selection(pop, pop_fit):
 
 def one_point_crossover(prob_crossover, parent_a, parent_b):
     if random.random() > prob_crossover:
-        parent_a, parent_b
+        return parent_a, parent_b
     child_a = parent_a.copy()
     child_b = parent_b.copy()
     pp = random.randint(0, len(parent_a))
@@ -82,7 +82,7 @@ def one_point_crossover(prob_crossover, parent_a, parent_b):
 def mutation(genotype, prob):
     new_genotype = genotype.copy()
     for gene in new_genotype:
-        if random.random() > prob:
+        if random.random() < prob:
             gene = 1 - gene
     return new_genotype
 
@@ -202,6 +202,7 @@ def rastrigin_fitness(genotype):
     formula, global_optimum, search_domain = generate_rastrigin_function(2)
     args = decode_genotype(genotype, search_domain)
     return 1 / ( abs(global_optimum - formula(args)) + 1)
+
 
 if __name__ == "__main__":
     
