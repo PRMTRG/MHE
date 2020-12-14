@@ -44,7 +44,8 @@ class GA:
             
             self.population = children
         
-        for i in range(len(self.population)):
+        for i in range(pop_size):
+            self.population_fitness[i] = self.fitness_f(self.population[i])
             print("{} = {}".format(self.population_fitness[i], self.population[i]))
         return self.population[self.get_best_specimen_index()].copy()
 
@@ -208,7 +209,7 @@ def rastrigin_fitness(genotype):
 
 if __name__ == "__main__":
     
-    iterations = 10000
+    iterations = 1000
     population_size = 100
     genotype_size = 10
     crossover_probability = 0.9
