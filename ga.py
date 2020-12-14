@@ -40,7 +40,9 @@ class GA:
             
             # mutation
             for i in range(pop_size):
-                self.population[i] = self.mutation_f(self.population[i], self.prob_mutation)
+                children[i] = self.mutation_f(children[i], self.prob_mutation)
+            
+            self.population = children
         
         for i in range(len(self.population)):
             print("{} = {}".format(self.population_fitness[i], self.population[i]))
@@ -206,8 +208,8 @@ def rastrigin_fitness(genotype):
 
 if __name__ == "__main__":
     
-    iterations = 100000
-    population_size = 10
+    iterations = 1000
+    population_size = 100
     genotype_size = 10
     crossover_probability = 0.9
     mutation_probability = 0.1
