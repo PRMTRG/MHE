@@ -47,7 +47,7 @@ class GA:
         for i in range(len(self.population)):
             print("{} = {}".format(self.population_fitness[i], self.population[i]))
         return self.population[self.get_best_specimen_index()].copy()
- 
+
 
 def gen_gen_starting_pop(population_size, genotype_size):
     def gen_starting_pop():
@@ -65,8 +65,8 @@ def tournament_selection(pop, pop_fit):
         tournament.append(random.randint(0, len(pop) - 1))
     best = tournament[0]
     for i in range(1, tournament_size):
-        if pop_fit[i] > pop_fit[best]:
-            best = i
+        if pop_fit[tournament[i]] > pop_fit[best]:
+            best = tournament[i]
     return pop[best].copy()
 
 
@@ -83,9 +83,9 @@ def one_point_crossover(prob_crossover, parent_a, parent_b):
 
 def mutation(genotype, prob):
     new_genotype = genotype.copy()
-    for gene in new_genotype:
+    for i in range(len(new_genotype)):
         if random.random() < prob:
-            gene = 1 - gene
+            new_genotype[i] = 1 - new_genotype[i]
     return new_genotype
 
 
@@ -208,7 +208,7 @@ def rastrigin_fitness(genotype):
 
 if __name__ == "__main__":
     
-    iterations = 1000
+    iterations = 10000
     population_size = 100
     genotype_size = 10
     crossover_probability = 0.9
