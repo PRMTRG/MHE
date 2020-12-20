@@ -96,6 +96,19 @@ def rate_solution(solution, problem):
     return result
 
 
+def validate_solution(solution, size):
+    sol = solution.copy()
+    if len(sol) != size:
+        return False
+    sol.sort()
+    if sol[0] != 0:
+        return False
+    for i in range(1, size):
+        if sol[i-1] != (sol[i] - 1):
+            return False
+    return True
+
+
 def generate_random_solution(problem):
     solution = []
     for i in list(np.random.permutation(len(problem[0]))):

@@ -1,5 +1,11 @@
 import random
 import math
+import solutions
+import problems
+import utils
+import argparse
+import sys
+import numpy as np
 
 
 class GA:
@@ -18,7 +24,9 @@ class GA:
         return self.population_fitness.index(max(self.population_fitness))
     def run(self):
         pop_size = len(self.population)
-        self.population_fitness = [ 0 for i in range(pop_size) ]
+        self.population_fitness = []
+        for i in range(pop_size):
+            self.population_fitness.append(self.fitness_f(self.population[i]))
         while not self.termination_f(self):
             # calculating fitness
             for i in range(pop_size):
@@ -35,6 +43,7 @@ class GA:
             while len(children) < pop_size and parents_idx < pop_size:
                 for child in self.crossover_f(self.prob_crossover, parents[parents_idx], parents[parents_idx - 1]):
                     children.append(child)
+                parents_idx += 2
             if len(children) > pop_size:
                 children = children[:pop_size]
             
@@ -46,15 +55,20 @@ class GA:
         
         for i in range(pop_size):
             self.population_fitness[i] = self.fitness_f(self.population[i])
-            print("{} = {}".format(self.population_fitness[i], self.population[i]))
+            #print("{} = {}".format(self.population_fitness[i], self.population[i]))
         return self.population[self.get_best_specimen_index()].copy()
 
 
-def gen_gen_starting_pop(population_size, genotype_size):
+def gen_gen_starting_pop(population_size, genotype_size, problem_size, only_valid):
     def gen_starting_pop():
         population = []
         for i in range(population_size):
-            population.append([ random.getrandbits(1) for j in range(genotype_size) ])
+            while True:
+                specimen = [ random.getrandbits(1) for j in range(genotype_size) ]
+                solution = decode_genotype(specimen, problem_size)
+                if solutions.validate_solution(solution, problem_size) or not only_valid:
+                    break
+            population.append(specimen)
         return population
     return gen_starting_pop
 
@@ -71,6 +85,19 @@ def tournament_selection(pop, pop_fit):
     return pop[best].copy()
 
 
+def roulette_selection(pop, pop_fit):
+    s = 0
+    for i in range(len(pop)):
+        s += pop_fit[i]
+    r = random.uniform(0, s)
+    p_sum = 0
+    for i in range(len(pop)):
+        p_sum += pop_fit[i]
+        if r <= p_sum:
+            return pop[i].copy()
+    raise Exception("roulette_selection")
+
+
 def one_point_crossover(prob_crossover, parent_a, parent_b):
     if random.random() > prob_crossover:
         return parent_a, parent_b
@@ -78,6 +105,20 @@ def one_point_crossover(prob_crossover, parent_a, parent_b):
     child_b = parent_b.copy()
     pp = random.randint(0, len(parent_a))
     for i in range(pp, len(parent_a)):
+        child_a[i], child_b[i] = child_b[i], child_a[i]
+    return child_a, child_b
+
+
+def two_point_crossover(prob_crossover, parent_a, parent_b):
+    if random.random() > prob_crossover:
+        return parent_a, parent_b
+    child_a = parent_a.copy()
+    child_b = parent_b.copy()
+    pp1 = random.randint(0, len(parent_a))
+    pp2 = random.randint(0, len(parent_a))
+    if pp2 < pp1:
+        pp1, pp2 = pp2, pp1
+    for i in range(pp1, pp2):
         child_a[i], child_b[i] = child_b[i], child_a[i]
     return child_a, child_b
 
@@ -95,6 +136,8 @@ def gen_terminate_after_iterations(iterations):
         try:
             self.iteration += 1
         except:
+            if iterations == 0:
+                return True
             self.iteration = 1
             return False
         if self.iteration >= iterations:
@@ -114,116 +157,142 @@ def gen_terminate_after_fitness_goal(goal):
     return terminate_after_fitness_goal
 
 
+def gen_terminate_after_std_dev_goal(goal):
+    def terminate_after_std_dev_goal(self):
+        try:
+            if np.std(self.population_fitness) <= goal:
+                return True
+        except:
+            return False
+        return False
+    return terminate_after_std_dev_goal
+
+
 def gen_terminate_immediately():
     def terminate_immediately(self):
         return True
     return terminate_immediately
 
 
-def xor_list(a, b):
-    if len(a) != len(b):
-        raise Exception("xor_list")
-    result = []
-    for i in range(len(a)):
-        result.append(a[i] ^ b[i])
-    return result
+def decode_genotype(genotype, size):
+    if len(genotype) % size != 0:
+        raise Exception("decode_genotype")
+    n = len(genotype) // size
+    enc_positions = [ genotype[i:i + n] for i in range(0, len(genotype), n) ]
+    solution = []
+    for pos in enc_positions:
+        res = 0
+        for i, v in enumerate(pos):
+            if v:
+                res += 2 ** i
+        solution.append(res)
+    return solution
 
 
-def shr_list(a, b):
-    result = []
-    for i in range(len(a) - b):
-        result.append(a[i + b])
-    for i in range(b):
-        result.append(0)
-    return result
+def gen_fitness(problem):
+    size = len(problem[0])
+    def fitness(genotype):
+        solution = decode_genotype(genotype, size)
+        if not solutions.validate_solution(solution.copy(), size):
+            return 0
+        rating = solutions.rate_solution(solution.copy(), problem)
+        return 1000000 / ( rating + 1 )
+    return fitness
 
 
-def gray_to_binary_list(gray):
-    result = gray.copy()
-    mask = gray.copy()
-    while 1 in mask:
-        mask = shr_list(mask, 1)
-        result = xor_list(result, mask)
-    return result
+def get_genotype_size(problem_size):
+    return math.ceil(np.log(problem_size+1) / np.log(2)) * problem_size
 
 
-def binary_list_to_gray(binary_list):
-    result = xor_list(binary_list, shr_list(binary_list, 1))  
-    return result
-
-
-def binary_list_to_decimal(binary_list):
-    result = 0
-    for i in range(len(binary_list)):
-        result += binary_list[i] * ( 2 ** i )
-    return result
-
-
-def decimal_to_binary_list(number):
-    result = [int(i) for i in bin(number)[2:]]
-    result.reverse()
-    return result
-
-
-def gray_to_decimal(gray):
-    return binary_list_to_decimal(gray_to_binary_list(gray))
+def run(selection="tournament", crossover="one_point", prob_crossover=0.5,
+        prob_mutation=0.01, termination="iterations", termination_arg=100):
+    problem = problems.read_problem_from_file("problems/size7.txt")
+    problem_size = len(problem[0])
+    pop_size = 20
+    solution_rater = solutions.SolutionRater("", False)
+    if selection == "tournament":
+        selection_f = tournament_selection
+    elif selection == "roulette":
+        selection_f = roulette_selection
+    if crossover == "one_point":
+        crossover_f = one_point_crossover
+    elif crossover == "two_point":
+        crossover_f = two_point_crossover
+    if termination == "iterations":
+        termination_f = gen_terminate_after_iterations(int(termination_arg))
+    elif termination == "fitness_goal":
+        termination_f = gen_terminate_after_fitness_goal(float(termination_arg))
+    elif termination == "std_deviation":
+        termination_f = gen_terminate_after_std_dev_goal(float(termination_arg))
+    solution_rater = solutions.SolutionRater("", False)
+    ga = GA(gen_gen_starting_pop(pop_size, get_genotype_size(problem_size), problem_size, True),
+            gen_fitness(problem), selection_f, crossover_f, mutation,
+            termination_f, prob_crossover, prob_mutation)
     
-    
-def decimal_to_gray(number):
-    return binary_list_to_gray(decimal_to_binary_list(number))
-
-
-def decode_genotype(genotype, search_domain):
-    max_num = 2 ** (len(genotype) // 2)
-    tot_x = search_domain[0][1] - search_domain[0][0]
-    tot_y = search_domain[1][1] - search_domain[1][0]
-    x_gen = genotype[:(len(genotype) // 2)]
-    y_gen = genotype[(len(genotype) // 2):]
-    x_num = gray_to_decimal(x_gen)
-    y_num = gray_to_decimal(y_gen)
-    x = search_domain[0][0] + ( ( tot_x / max_num ) * x_num )
-    y = search_domain[1][0] + ( ( tot_y / max_num ) * y_num )
-    return [ x, y ]
-
-
-def generate_rastrigin_function(n):
-    def rastrigin_formula(x):
-        n = len(x)
-        a = 10
-        s = 0
-        for i in range(n):
-            s += x[i] ** 2 - a * math.cos(2 * math.pi * x[i])
-        return a * n + s
-    global_optimum = 0
-    search_domain = []
-    for i in range(n):
-        search_domain.append((-5.12, 5.12))
-    return rastrigin_formula, global_optimum, search_domain
-
-
-def rastrigin_fitness(genotype):
-    formula, global_optimum, search_domain = generate_rastrigin_function(2)
-    args = decode_genotype(genotype, search_domain)
-    return 1 / ( abs(global_optimum - formula(args)) + 1)
+    ga_best_genotype = ga.run()
+    ga_best_solution = decode_genotype(ga_best_genotype, problem_size)
+    if solutions.validate_solution(ga_best_solution, problem_size):
+        ga_best_rating = solution_rater.rate(ga_best_solution, problem)
+    else:
+        ga_best_rating = 0
+    return ga_best_solution, ga_best_rating
 
 
 if __name__ == "__main__":
     
-    iterations = 1000
-    population_size = 100
-    genotype_size = 10
-    crossover_probability = 0.9
-    mutation_probability = 0.1
+    problem = problems.read_problem_from_file("problems/size7.txt")
+    problem_size = len(problem[0])
+    pop_size = 20
     
-    ga = GA(gen_gen_starting_pop(population_size, genotype_size), rastrigin_fitness, tournament_selection, one_point_crossover,
-            mutation, gen_terminate_after_iterations(iterations), crossover_probability, mutation_probability)
+    selection_f = tournament_selection
+    crossover_f = one_point_crossover
+    prob_crossover = 0.5
+    prob_mutation = 0.01
+    #termination_f = gen_terminate_after_iterations(0)
+    termination_f = gen_terminate_after_std_dev_goal(0.000000000000000000001)
     
-    best_genotype = ga.run()
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--selection", type=str)
+        parser.add_argument("--crossover", type=str)
+        parser.add_argument("--prob_crossover", type=float)
+        parser.add_argument("--prob_mutation", type=float)
+        parser.add_argument("--termination", type=str)
+        parser.add_argument("--termination_arg", type=str)
+        args = parser.parse_args()
+        if args.selection == "tournament":
+            selection_f = tournament_selection
+        elif args.selection == "roulette":
+            selection_f = roulette_selection
+        if args.crossover == "one_point":
+            crossover_f = one_point_crossover
+        elif args.crossover == "two_point":
+            crossover_f = two_point_crossover
+        prob_crossover = args.prob_crossover
+        prob_mutation = args.prob_mutation
+        if args.termination == "iterations":
+            termination_f = gen_terminate_after_iterations(int(args.termination_arg))
+        elif args.termination == "fitness_goal":
+            termination_f = gen_terminate_after_fitness_goal(float(args.termination_arg))
+        elif args.termination == "std_deviation":
+            termination_f = gen_terminate_after_std_dev_goal(float(args.termination_arg))
     
-    formula, _, search_domain = generate_rastrigin_function(2)
-    
-    print()
-    print("{} = {} = {} = {}".format(rastrigin_fitness(best_genotype), formula(decode_genotype(best_genotype, search_domain)), decode_genotype(best_genotype, search_domain), best_genotype))
+    solution_rater = solutions.SolutionRater("", False)
+    ga = GA(gen_gen_starting_pop(pop_size, get_genotype_size(problem_size), problem_size, True),
+            gen_fitness(problem), selection_f, crossover_f, mutation,
+            termination_f, prob_crossover, prob_mutation)
+
+    bf_best_solution = solutions.bruteforce(solution_rater, problem)
+    bf_best_rating = solution_rater.rate(bf_best_solution, problem)
+    print("BF = {} = {}".format(bf_best_solution, bf_best_rating))    
+    ga_best_genotype = ga.run()
+    ga_best_solution = decode_genotype(ga_best_genotype, problem_size)
+    if solutions.validate_solution(ga_best_solution, problem_size):
+        ga_best_rating = solution_rater.rate(ga_best_solution, problem)
+    else:
+        ga_best_rating = 0
+    print("GA = {} = {}".format(ga_best_solution, ga_best_rating))
+
     
     
     
