@@ -10,7 +10,7 @@ import numpy as np
 
 class GA:
     def __init__(self, gen_starting_pop_f, fitness_f, selection_f, crossover_f,
-                 mutation_f, termination_f, prob_crossover, prob_mutation):
+                 mutation_f, termination_f, prob_crossover, prob_mutation, problem_size):
         self.gen_starting_pop_f = gen_starting_pop_f
         self.fitness_f = fitness_f
         self.selection_f = selection_f
@@ -20,6 +20,7 @@ class GA:
         self.prob_crossover = prob_crossover
         self.prob_mutation = prob_mutation
         self.population = self.gen_starting_pop_f()
+        self.problem_size = problem_size
     def get_best_specimen_index(self):
         return self.population_fitness.index(max(self.population_fitness))
     def run(self):
@@ -51,9 +52,16 @@ class GA:
             for i in range(pop_size):
                 children[i] = self.mutation_f(children[i], self.prob_mutation)
             
+            # fix genotype
+            for i in range(pop_size):
+                children[i] = fix_genotype(children[i], self.problem_size)
+            
             self.population = children
         
         for i in range(pop_size):
+            
+            #self.population[i] = fix_genotype(self.population[i], self.problem_size)            
+            
             self.population_fitness[i] = self.fitness_f(self.population[i])
             #print("{} = {}".format(self.population_fitness[i], self.population[i]))
         return self.population[self.get_best_specimen_index()].copy()
@@ -189,6 +197,20 @@ def decode_genotype(genotype, size):
     return solution
 
 
+def encode_genotype(solution):
+    size = len(solution)
+    bits_per_position = get_genotype_size(size) // size
+    genotype = []
+    for p in solution:
+        pos = [int(x) for x in list('{0:0b}'.format(p))]
+        pos.reverse()
+        if len(pos) < bits_per_position:
+            for i in range(bits_per_position - len(pos)):
+                pos.append(0)
+        genotype += pos
+    return genotype
+
+
 def gen_fitness(problem):
     size = len(problem[0])
     def fitness(genotype):
@@ -201,14 +223,28 @@ def gen_fitness(problem):
 
 
 def get_genotype_size(problem_size):
-    return math.ceil(np.log(problem_size+1) / np.log(2)) * problem_size
+    return math.ceil(np.log(problem_size) / np.log(2)) * problem_size
 
 
-def run(selection="tournament", crossover="one_point", prob_crossover=0.5,
-        prob_mutation=0.01, termination="iterations", termination_arg=100):
-    problem = problems.read_problem_from_file("problems/size7.txt")
+def fix_genotype(genotype, size):
+    pos_pos = [ i for i in range(size) ]
+    solution = decode_genotype(genotype, size)
+    
+    for i in range(size):
+        if solution[i] not in solution[:i] and solution[i] < size:
+            continue
+        for pp in pos_pos:
+            if pp not in solution:
+                solution[i] = pp
+                break
+    return encode_genotype(solution)
+
+
+def run(selection="tournament", crossover="one_point", prob_crossover=0.3,
+        prob_mutation=0.1, termination="iterations", termination_arg=100,
+        pop_size=40):
+    problem = problems.read_problem_from_file("problems/size9.txt")
     problem_size = len(problem[0])
-    pop_size = 20
     solution_rater = solutions.SolutionRater("", False)
     if selection == "tournament":
         selection_f = tournament_selection
@@ -225,9 +261,9 @@ def run(selection="tournament", crossover="one_point", prob_crossover=0.5,
     elif termination == "std_deviation":
         termination_f = gen_terminate_after_std_dev_goal(float(termination_arg))
     solution_rater = solutions.SolutionRater("", False)
-    ga = GA(gen_gen_starting_pop(pop_size, get_genotype_size(problem_size), problem_size, True),
+    ga = GA(gen_gen_starting_pop(pop_size, get_genotype_size(problem_size), problem_size, False),
             gen_fitness(problem), selection_f, crossover_f, mutation,
-            termination_f, prob_crossover, prob_mutation)
+            termination_f, prob_crossover, prob_mutation, problem_size)
     
     ga_best_genotype = ga.run()
     ga_best_solution = decode_genotype(ga_best_genotype, problem_size)
@@ -238,18 +274,16 @@ def run(selection="tournament", crossover="one_point", prob_crossover=0.5,
     return ga_best_solution, ga_best_rating
 
 
-if __name__ == "__main__":
-    
-    problem = problems.read_problem_from_file("problems/size7.txt")
+def main():
+    problem = problems.read_problem_from_file("problems/size9.txt")
     problem_size = len(problem[0])
-    pop_size = 20
+    pop_size = 100
     
     selection_f = tournament_selection
-    crossover_f = one_point_crossover
-    prob_crossover = 0.5
+    crossover_f = two_point_crossover
+    prob_crossover = 0.3
     prob_mutation = 0.01
-    #termination_f = gen_terminate_after_iterations(0)
-    termination_f = gen_terminate_after_std_dev_goal(0.000000000000000000001)
+    termination_f = gen_terminate_after_iterations(10000)
     
     if len(sys.argv) > 1:
         parser = argparse.ArgumentParser()
@@ -278,13 +312,13 @@ if __name__ == "__main__":
             termination_f = gen_terminate_after_std_dev_goal(float(args.termination_arg))
     
     solution_rater = solutions.SolutionRater("", False)
-    ga = GA(gen_gen_starting_pop(pop_size, get_genotype_size(problem_size), problem_size, True),
+    ga = GA(gen_gen_starting_pop(pop_size, get_genotype_size(problem_size), problem_size, False),
             gen_fitness(problem), selection_f, crossover_f, mutation,
-            termination_f, prob_crossover, prob_mutation)
+            termination_f, prob_crossover, prob_mutation, problem_size)
 
-    bf_best_solution = solutions.bruteforce(solution_rater, problem)
-    bf_best_rating = solution_rater.rate(bf_best_solution, problem)
-    print("BF = {} = {}".format(bf_best_solution, bf_best_rating))    
+    # bf_best_solution = solutions.bruteforce(solution_rater, problem)
+    # bf_best_rating = solution_rater.rate(bf_best_solution, problem)
+    # print("BF = {} = {}".format(bf_best_solution, bf_best_rating))    
     ga_best_genotype = ga.run()
     ga_best_solution = decode_genotype(ga_best_genotype, problem_size)
     if solutions.validate_solution(ga_best_solution, problem_size):
@@ -292,7 +326,11 @@ if __name__ == "__main__":
     else:
         ga_best_rating = 0
     print("GA = {} = {}".format(ga_best_solution, ga_best_rating))
+    
 
+if __name__ == "__main__":
+    main()
+    
     
     
     
